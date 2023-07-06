@@ -1,3 +1,7 @@
+> **Note**
+> Updated to work for HuggingFace `transformers` BERT models!
+
+
 # PyTorch Model Compare
 
 [![Downloads](https://static.pepy.tech/personalized-badge/torch-cka?period=total&units=international_system&left_color=black&right_color=orange&left_text=Downloads)](https://pepy.tech/project/torch-cka)
