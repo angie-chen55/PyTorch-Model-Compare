@@ -179,7 +179,6 @@ class CKA:
             else len(list(self.model2.modules()))
         )
 
-        # self.hsic_matrix = torch.zeros(N, M, 3)
         self.hsic_matrix = None
 
         num_batches = min(len(dataloader1), len(dataloader1))
@@ -194,6 +193,21 @@ class CKA:
             self.model2_features = {}
             _ = self.model1(x1.to(self.device))
             _ = self.model2(x2.to(self.device))
+            # Possibly remove some features
+            features_to_remove1 = []
+            for k, v in self.model1_features.items():
+                if not torch.is_tensor(v) or torch.isnan(v).any():
+                    features_to_remove1.append(k)
+            for f in features_to_remove1:
+                del self.model1_features[f]
+                self.model1_info["Layers"].remove(f)
+            features_to_remove2 = []
+            for k, v in self.model2_features.items():
+                if not torch.is_tensor(v) or torch.isnan(v).any():
+                    features_to_remove2.append(k)
+            for f in features_to_remove2:
+                del self.model2_features[f]
+                self.model2_info["Layers"].remove(f)
             if self.hsic_matrix is None:
                 self.hsic_matrix = torch.zeros(
                     len(self.model1_features), len(self.model2_features), 3
