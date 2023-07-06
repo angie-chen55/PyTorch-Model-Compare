@@ -106,31 +106,31 @@ class CKA:
         else:
             raise RuntimeError("Unknown model name for _log_layer.")
 
+    def _register_layers(self, model, model_layers, model_info, model_name):
+        for name, layer in model.named_modules():
+            # Don't register any embedding or dropout layers
+            if "embedding" in name or "dropout" in name:
+                continue
+            if model_layers is not None:
+                if name in model_layers:
+                    model_info["Layers"] += [name]
+                    layer.register_forward_hook(
+                        partial(self._log_layer, model_name, name)
+                    )
+            else:
+                model_info["Layers"] += [name]
+                layer.register_forward_hook(partial(self._log_layer, model_name, name))
+
     def _insert_hooks(self):
         # Model 1
-        for name, layer in self.model1.named_modules():
-            if self.model1_layers is not None:
-                if name in self.model1_layers:
-                    self.model1_info["Layers"] += [name]
-                    layer.register_forward_hook(
-                        partial(self._log_layer, "model1", name)
-                    )
-            else:
-                self.model1_info["Layers"] += [name]
-                layer.register_forward_hook(partial(self._log_layer, "model1", name))
+        self._register_layers(
+            self.model1, self.model1_layers, self.model1_info, "model1"
+        )
 
         # Model 2
-        for name, layer in self.model2.named_modules():
-            if self.model2_layers is not None:
-                if name in self.model2_layers:
-                    self.model2_info["Layers"] += [name]
-                    layer.register_forward_hook(
-                        partial(self._log_layer, "model2", name)
-                    )
-            else:
-
-                self.model2_info["Layers"] += [name]
-                layer.register_forward_hook(partial(self._log_layer, "model2", name))
+        self._register_layers(
+            self.model2, self.model2_layers, self.model2_info, "model2"
+        )
 
     def _HSIC(self, K, L):
         """
@@ -194,22 +194,6 @@ class CKA:
             self.model2_features = {}
             _ = self.model1(x1.to(self.device))
             _ = self.model2(x2.to(self.device))
-            self.model1_features = {
-                k: v
-                for k, v in self.model1_features.items()
-                if "embeddings" not in k
-                and "dropout" not in k
-                and torch.is_tensor(v)
-                and not torch.isnan(v).any()
-            }
-            self.model2_features = {
-                k: v
-                for k, v in self.model2_features.items()
-                if "embeddings" not in k
-                and "dropout" not in k
-                and torch.is_tensor(v)
-                and not torch.isnan(v).any()
-            }
             if self.hsic_matrix is None:
                 self.hsic_matrix = torch.zeros(
                     len(self.model1_features), len(self.model2_features), 3
