@@ -150,7 +150,12 @@ class CKA:
         final_result = (1 / (N * (N - 3)) * result).item()
         return final_result
 
-    def compare(self, dataloader1: DataLoader, dataloader2: DataLoader = None) -> None:
+    def compare(
+        self,
+        dataloader1: DataLoader,
+        dataloader2: DataLoader = None,
+        only_compare_diagonals: bool = False,
+    ) -> None:
         """
         Computes the feature similarity between the models on the
         given datasets.
@@ -200,14 +205,16 @@ class CKA:
                     features_to_remove1.append(k)
             for f in features_to_remove1:
                 del self.model1_features[f]
-                self.model1_info["Layers"].remove(f)
+                if f in self.model1_info["Layers"]:
+                    self.model1_info["Layers"].remove(f)
             features_to_remove2 = []
             for k, v in self.model2_features.items():
                 if not torch.is_tensor(v) or torch.isnan(v).any():
                     features_to_remove2.append(k)
             for f in features_to_remove2:
                 del self.model2_features[f]
-                self.model2_info["Layers"].remove(f)
+                if f in self.model2_info["Layers"]:
+                    self.model2_info["Layers"].remove(f)
             if self.hsic_matrix is None:
                 self.hsic_matrix = torch.zeros(
                     len(self.model1_features), len(self.model2_features), 3
@@ -221,6 +228,8 @@ class CKA:
                 self.hsic_matrix[i, :, 0] += kk_hsic / num_batches
 
                 for j, (name2, feat2) in enumerate(self.model2_features.items()):
+                    if only_compare_diagonals and name2 != name1:
+                        continue
                     Y = feat2.flatten(1)
                     L = Y @ Y.t()
                     L.fill_diagonal_(0)
